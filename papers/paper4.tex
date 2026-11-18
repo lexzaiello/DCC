@@ -31,6 +31,8 @@
 \usepackage{mathpartir}
 \usepackage{stmaryrd}
 \addbibresource{./refs.bib}
+\newcommand{\tinfer}{\text{infer}}
+\newcommand{\step}{\text{step?}}
 \newcommand{\none}{\text{none}}
 \newcommand{\congrfun}{\text{congrFun}}
 \newcommand{\congrarg}{\text{congrArg}}
@@ -125,10 +127,10 @@ All of our results have been formalized in the Lean 4 proof assistant. To this d
 \subsection*{The SK Combinator Calculus}
 
 Previous attempts by others at combinatory dependent type theory have used the \skbf{} combinator calculus \autocite[p. 10:14]{altenkirch}.
-The \sk{} combinators are a Turing-complete term-writing system equivalent to the \(\lambda\)-calculus \cite{altenkirch2023combinatory} with the rewrite rules \(K x y = x\) and \(S x y z = x z (y z)\).
-Good progress has been made, but past approaches were limited by the minimalism of \sk{}. Types become very large and difficult to work with, relying on a hierarchy of helper (``meta'' combinators) to encode basic types \autocite[10:17][para. 2]{altenkirch}, and type parameters in the primitive combinators \(S\) and \(K\) were also quantified externally, rather than internally \autocite[10:17][para. 2]{altenkirch}.
+The \sk{} combinators are a Turing-complete term-rewriting system equivalent to the \(\lambda\)-calculus \cite{altenkirch2023combinatory} with the rewrite rules \(K x y = x\) and \(S x y z = x z (y z)\).
+Good progress has been made, but past approaches were limited by the minimalism of \sk{}. Types become very large and difficult to work with, relying on a hierarchy of helper combinators to encode basic types \autocite[10:17][para. 2]{altenkirch}, and type parameters in the primitive combinators \(S\) and \(K\) were also quantified externally, rather than internally \autocite[10:17][para. 2]{altenkirch}.
 
-By contrast, DCC is based on an extension of categorical combinators (\cclbf) to dependent types and affine logic. In DCC, type arguments are internalized, rather than externally quantified and all universe levels are inferred. No hierarchy of helper (``meta'' combinators) are required to support dependent types (e.g., \(\Pi[Y x][Z x]\) in \autocite[10:17][lines 5-7]{altenkirch}). The only constructions required are \(\Pi\)-types, \(\Sigma\)-types, identity types, sorts, and the core computational combinators as in \ccl{}.
+By contrast, DCC is based on an extension of categorical combinators (\cclbf) to dependent types and affine logic. In DCC, type arguments are internalized, rather than externally quantified and all universe levels are inferred. No hierarchy of helper combinators are required to support dependent types (e.g., \(\Pi[Y x][Z x]\) in \autocite[10:17][lines 5-7]{altenkirch}). The only constructions required are \(\Pi\)-types, \(\Sigma\)-types, identity types, sorts, and the core computational combinators as in \ccl{}.
 
 \subsection*{Categorical Combinators (\texorpdfstring{\ccl}{CCL})}
 
@@ -149,7 +151,7 @@ Categorical combinators~\cite{cmachine,CURIEN1986188} are a combinatory logic ba
   {Id x \barrc{\ccle} x}\\
   \inferrule[Pair]
   { }
-  {\la x, y \ra x \barrc{\ccle} (M x, N x)}\qquad
+  {\la x, y \ra x \barrc{\ccle} (x z, y z)}\qquad
   \inferrule[App]
   { }
   { App (x, y) \barrc{\ccle} x y}\qquad
@@ -204,9 +206,9 @@ The reductions of \(1_{\lambda} x y\), \(\compile{1_{\lambda}} x y\), and \(\com
                                &= x y
   \end{aligned}
 \end{equation*}
-Despite their notable advantages in term legibility, more closely resembling De Bruijn-indexed \(\lambda\)-calculus, adapting categorical combinators to dependent types has not been attempted thus far.
+Despite their notable advantages in term legibility, more closely resembling De Bruijn-indexed \(\lambda\)-calculus, adapting Curien's categorical combinators to dependent types has not been attempted thus far.
 
-\subsubsection{The Simply-Typed Categorical Combinators}
+\subsubsection*{The Simply-Typed Categorical Combinators}
 
 A simply-typed variant (\cclkbf) of the categorical combinators is presented in \autocite[p. 220]{CURIEN1986188}. Type arguments are given as points. Type arguments can be inferred altogether in Curry, Pair, Comp, and in couples \ref{coup}. The inference rules are as such:
 
@@ -237,7 +239,7 @@ A simply-typed variant (\cclkbf) of the categorical combinators is presented in 
   {(x, y) : A \times B}
 \end{gather*}
 
-\subsection{Affine Logic}
+\subsection*{Affine Logic}
 
 Affine logic refers to any logic where duplication (``contraction'') is restricted or prohibited, although such logics are usually related to linear logic \autocite[p. 173][sec. 1, par. 1]{kopylov2001decidability}. Linear logic is a constructive logic \cite{girard1987linear} wherein terms in context must be used exactly once, except in the ``exponential'' modalities (\(!\) and \(?\)) \autocite[p. 3]{girard1987linear}:
 
@@ -270,18 +272,30 @@ Affine logic refers to any logic where duplication (``contraction'') is restrict
   { \vdash A, ?B}
   { \vdash !A, ?B}
 \end{gather*}
-Weakening is retained in affine logic. Most importantly, affine logic forms a decidable fragment of first-order logic \cite{ketonen1984decidable}.
+Weakening is retained in affine logic.
 
-\section{The Dependent Combinator Calculus}\label{intro:dcc}
+\subsection*{Extensional Type Theory}
 
-The Dependent Combinator Calculus (DCC) is a dependent type theory where types are terms which is combinatory (it has no contexts and no variables). It is based on an extension of the simply-typed categorical combinators to dependent types. DCC uses affine logic, meaning term duplication is restricted in such a way that all programs are provably terminating by syntactic size, even if they are not well-typed. We use this fact to show that DCC is strongly-normalizing, has decidable type-checking, is consistent, and that equality reflection holds as a computable metatheoretic definition.
+A type theory is said to be extensional if the equality reflection rule holds \autocite[p. 16]{hofmann1995extensional}:
+
+\[
+  \inferrule
+  { \Gamma \vdash P : \text{Id}_\delta(X, Y)}
+  { \Gamma \vdash X = Y : \delta }
+\]
+
+That is, a type theory is extensional if propositional equalities between terms induce a syntactic, definitional equality between the same terms. Extensional equality reflection is desirable for type theories to have, since its presence may induce other useful properties such as propositional extensionality, proof-irrelevance, uniqueness of identity proofs, and function extensionality in case quotient types are present \autocite[18]{hofmann1995extensional}. However, the axiomatic presence of this rule is thought to result in undecidable type-checking, since checking that \(e : \text{Id}_\delta(X, Y)\) thus requires deciding whether \(X\) and \(Y\) are definitionally equal (a procedure which may not terminate).
+
+\section*{The Dependent Combinator Calculus}\label{intro:dcc}
+
+The Dependent Combinator Calculus (DCC) is a combinatory dependent type theory where types are terms. It is based on an extension of the simply-typed categorical combinators to dependent types and has no variables and no contexts. DCC uses affine logic, meaning term duplication is restricted in such a way that all programs are provably terminating by syntactic size, even if they are not well-typed. We use this fact to show that DCC is strongly-normalizing, has decidable type-checking, is consistent, and that equality reflection holds as a computable metatheoretic definition.
 
 \section{Term Syntax}
 
-The base objects are a modified super-set of the base terms in \cclk{}. Products are replaced by \(\Sigma\), arrows by \(\Pi\), an equality type along its type formers is added, sorts are added, and bottom, top, and boolean types are added with the corresponding introducing terms. The syntax is given in S-expressions for clarity. A term (\(E\)) is either a constant of term arity zero (\(E_c\)), a parenthesized combinator (\(C\)) juxtaposed with its points, or a parenthesized application of two terms.
+The base objects are a modified super-set of the base terms in \cclk{}. Products are replaced by \(\Sigma\), arrows by \(\Pi\), an equality type along with its type formers is added, an infinite sort hierarchy is added, bottom, top, and boolean types are added with their corresponding introducing terms and recursors, and a type to represent affine resources is added along with some basic affine combinators. The syntax is given in S-expressions for clarity. A term (\(E\)) is either a constant of term arity zero (\(E_c\)), a parenthesized combinator (\(C\)) juxtaposed with its points, or a parenthesized application of two terms.
 
 \begin{defi}\label{def:constants}
-  Constants (\(E_c\)) are sort levels (written as \(\sort{u}\)), the bottom (\(\mathbb{0}\)), top (\(\mathbb{1}\)) type and its inhabitant (\(\ast\)), the boolean type (\(\mathbb{2}\)) along with its inhabitants \(\mathbb{1}_{\mathbb{2}}\), and \(\mathbb{0}_{\mathbb{2}}\), and an opaque ``hole'' term used internally in type-checking:
+  Constant terms (\(E_c\)) are sort levels (written as \(\sort{u}\)), the bottom (\(\mathbb{0}\)), top (\(\mathbb{1}\)) type and its inhabitant (\(\ast\)), the boolean type (\(\mathbb{2}\)) along with its inhabitants \(\mathbb{1}_{\mathbb{2}}\), and \(\mathbb{0}_{\mathbb{2}}\), and an opaque ``hole'' term used internally in type-checking:
   \[
     \begin{gathered}
       E_c \coloneq \{\sort{u}, \mathbb{0}, \mathbb{1}, \mathbb{2}, \ast, \mathbb{1}_{\mathbb{2}}, \mathbb{0}_{\mathbb{2}}, \hole{n}\}
@@ -329,7 +343,7 @@ The base objects are a modified super-set of the base terms in \cclk{}. Products
 
 Conversion uses call-by-value operational semantics and is a modified super-set of those in \ccl{}. Terms are reduced in any particular order of: head reductions, points of the term if it is a combinator, or the constituent function and argument if it is an application. We have global confluence, strong normalization, and uniqueness of normal forms. We do not have a recursor for equality, since DCC is extensional~\ref{extensional} and propositional equality coincides with definitional equality, so it is not necessary.
 
-When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduction, \(A \barr^{*} B\) to denote star-step \(\beta\)-reduction, and \(A \barr^{!} B\) to denote \(\beta\)-reduction to a normal form.
+When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduction, \(A \barr^{*} B\) to denote the reflexive transitive closure of \(\beta\)-reduction, and \(A \barr^{!} B\) to denote \(\beta\)-reduction to a normal form.
 
 \begin{defi}\label{conv:idquotcomp}
   The identity, quotation, and composition are the same as in \cclk{}:
@@ -467,7 +481,7 @@ When \(A, B \in E\), we use \(A \barr B\) to denote single-step \(\beta\)-reduct
 
 \subsection{Some Properties of Conversion}\label{sec:thmsconv}
 
-DCC is provably strongly normalizing due to our choice of affine logic. DCC is also locally confluent, and thus globally confluent by Newmann's lemma~\cite{newman1942theories}. As such, normal forms are unique and \(\beta\)-equality is decidable. We use this fact to establish judgmental decidability.
+DCC is provably strongly normalizing due to our choice of affine logic. DCC is also locally confluent, and thus globally confluent by Newman's lemma~\cite{newman1942theories}. As such, normal forms are unique and \(\beta\)-equality is decidable. We use this fact to establish judgmental decidability.
 
 \subsubsection{Strong-Normalization by Decreasing Measure}
 
@@ -475,42 +489,29 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
 
 \begin{defi}
   If \(e \in E_c\), then \(size(e) = 1\), and if \((f x) \in E\) and \((f x)\) is an application, then \(size((f x)) = size(f) + size(x)\). Otherwise, combinator sizes are defined as:
-  \begin{gather*}
-    size(\comb[Id][A]) = size(A) + 1 \quad size(\comb[\circ][x][y]) = size(x) + size(y) + 1\\
-    size(\comb[`B][x]) = size(B) + size(x) + 1
-  \end{gather*}
-  \begin{align*}
-    size(\comb[,B][x][y]) &= size(B) + size(x) + size(y) + 1\\
-    size(\comb[Fst][B]) &= size(B) + 1\\
-    size(\comb[Snd][B]) &= size(B) + 1\\
-    size(\comb[Swap][B][C]) &= size(B) + size(C) + 2
-  \end{align*}
-  \begin{align*}
-    size(\comb[= A][x][y]) &= size(A) + size(x) + size(y) + 1\\
-    size(\comb[Eql][B]) &= size(B) + 2 \\
-    size(\comb[='][B]) &= size(B) + 2\\
-    size(\comb[refl][B]) &= size(B) + 1
-  \end{align*}
-  \begin{align*}
-    size(\comb[\Pi][B][C]) &= size(B) + size(C) + 1\\
-    size(\comb[\Sigma][A][B]) &= size(A) + size(B) + 1 \\
-    size(\comb[\Sigma'][B][C]) &= size(B) + size(C) + 1
-  \end{align*}
-  \begin{align*}
-    size(\comb[!][x]) &= size(x) + 1 & size(\comb[*][A]) &= size(A) + 1\\
-    size(\comb[!<>][x]) &= size(x) + 2 & size(\comb[\$<>][x]) &= size(x) * 5 + 1\\
-    size(\comb[\&][x]) & = size(x) * 5 + 1 & &
-  \end{align*}
-  \begin{align*}
-    size(\comb[\Lambda][A][B][x]) &= size(A) + size(B) + size(x) + 2\\
-    size(\comb[\langle , \rangle B][x][y]) &= 3 * (size(B) + (2 + size(x)) + size(y) + 3)\\
-    size(\comb[!\Lambda][A][B][x]) &= 2 * size(A) + 6 * (size(B) + 1) + 2 * size(x) + 5\\
-    size(\comb[Eval][A][B][x]) &= size(A) + size(B) + size(x) + 1
-  \end{align*}
-  \begin{align*}
-    size(\comb[\mathbb{2}.Rec][x][y][z]) &= size(x) + size(y) + size(z) + 1\\
-    size(\comb[\mathbb{0}.Rec][x]) &= size(x) + 1
-  \end{align*}
+  \[
+    \begin{array}{l @{\hspace{3em}} r}
+      size(\comb[Id][A]) = size(A) + 1 & size(\comb[\circ][x][y]) = size(x) + size(y) + 1\\
+      \multicolumn{2}{l}{size(\comb[`B][x]) = size(B) + size(x) + 1}\\
+      \multicolumn{2}{l}{size(\comb[,B][x][y]) = size(B) + size(x) + size(y) + 1}\\
+      size(\comb[Fst][B]) = size(B) + 1 & size(\comb[Snd][B]) = size(B) + 1\\
+      \multicolumn{2}{l}{size(\comb[Swap][B][C]) = size(B) + size(C) + 2}\\
+      \multicolumn{2}{l}{size(\comb[= A][x][y]) = size(A) + size(x) + size(y) + 1}\\
+      size(\comb[Eql][B]) = size(B) + 2 & size(\comb[='][B]) = size(B) + 2\\
+      \multicolumn{2}{l}{size(\comb[refl][B]) = size(B) + 1}\\
+      size(\comb[\Pi][B][C]) = size(B) + size(C) + 1 & size(\comb[\Sigma][A][B]) = size(A) + size(B) + 1\\
+      \multicolumn{2}{l}{size(\comb[\Sigma'][B][C]) = size(B) + size(C) + 1}\\
+      size(\comb[!][x]) = size(x) + 1 & size(\comb[*][A]) = size(A) + 1\\
+      size(\comb[!<>][x]) = size(x) + 2 & size(\comb[\$<>][x]) = size(x) * 5 + 1\\
+      \multicolumn{2}{l}{size(\comb[\&][x]) = size(x) * 5 + 1}\\
+      \multicolumn{2}{l}{size(\comb[\Lambda][A][B][x]) = size(A) + size(B) + size(x) + 2}\\
+      \multicolumn{2}{l}{size(\comb[\langle , \rangle B][x][y]) = 3 * (size(B) + (2 + size(x)) + size(y) + 3)}\\
+      \multicolumn{2}{l}{size(\comb[!\Lambda][A][B][x]) = 2 * size(A) + 6 * (size(B) + 1) + 2 * size(x) + 5}\\
+      \multicolumn{2}{l}{size(\comb[Eval][A][B][x]) = size(A) + size(B) + size(x) + 1}\\
+      \multicolumn{2}{l}{size(\comb[\mathbb{2}.Rec][x][y][z]) = size(x) + size(y) + size(z) + 1}\\
+      \multicolumn{2}{l}{size(\comb[\mathbb{0}.Rec][x]) = size(x) + 1}
+    \end{array}
+  \]
 \end{defi}
 
 \begin{lem}\label{lem:pointsize}
@@ -537,7 +538,7 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
   \item[Curry]
   \begin{align*}
     size((\comb[\Lambda][A][B][x] y z)) &= size(A) + size(B) + size(x) + 2 + size(y) + size(z)\\
-                                        & > size(x) + size(B) + size(y) + size(z)
+                                        & > size(x) + size(B) + size(y) + size(z) + 1
   \end{align*}
   \item[Eval]
   \begin{align*}
@@ -556,22 +557,22 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
     \begin{align*}
       size((\comb[!\Lambda][A][B][x] \comb[\&][y] \comb[\&][z])) &= 2 * size(A) + 6 * (size(B) + 1) &\\
       & + 2*size(x) + 5 + size(y) * 5 + 1 + size(y) * z + 1\\
-      & > size(x) + 5 * (size(B) + size(y) + size(z)) + 1
+      & > size(x) + 5 * (size(B) + size(y) + size(z) + 1) + 1
     \end{align*}
   \item[Pair]
       \begin{align*}
-        size((\comb[\langle , \rangle B][x][y] \comb[\&][z])) &= 3 * (size(B) + (size(x) + 2) + size(y) + 3) + (5 * size(z) + 1)\\
-        & > 5 * (size(B) + 4 * size(z) + 2 * size(x) + size(y)) + 1
+        size((\comb[\langle , \rangle B][x][y] \comb[\&][z])) &= 3 * (size(B) + size(x) + 2 + size(y) + 3) + 5 * size(z) + 1\\
+        & > size(B) + size(z) * 4 + size(x) * 2 + size(y)
       \end{align*}
   \item[Eq']
   \begin{align*}
     size((\comb[='][B] x y z)) &= size(B) + 2 + size(x) + size(y) + size(z)\\
-    & > (size(B) + size(x)) + size(y) + size(z) + 1
+    & > size(B) + size(x) + size(y) + size(z) + 1
   \end{align*}
   \item[Eql]
   \begin{align*}
-    size((\comb[Eql][B] \comb[\&][x] \comb[\&][y])) &= size(B) + 2 + (size(x) * 5 + 1) (size(y) * 5 + 1)\\
-    & > (size(B) + size(x)) + size(y) + size(y) + 1
+    size((\comb[Eql][B] \comb[\&][x] \comb[\&][y])) &= size(B) + 2 + (size(x) * 5 + 1) + (size(y) * 5 + 1)\\
+    & > size(B) + size(x) + size(y) + size(y) + 1
   \end{align*}
   \item[Sigma']
   \begin{align*}
@@ -690,7 +691,7 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
 \end{thm}
 
 \begin{proof}
-  The proof proceeds by Newmann's lemma:
+  The proof proceeds by Newman's lemma:
   \begin{description}
     \item[$A = B$ and $A = C$] By reflexivity, \(B \barr^{*} B\) and \(C \barr^{*} B\).
     \item[$A = B$ but $A \neq C$] Since \(A = B\), \(B \barr^{*} C\), and by reflexivity, \(C \barr^{*} C\).
@@ -702,125 +703,22 @@ We show strong normalization by defining a function \(size : E \rightarrow \math
 
 \subsection{Decision Procedure for \texorpdfstring{\(\beta\)}{beta}-Equality}
 
-Our \(\beta\)-reduction rules are implemented as a total, terminating \(\beta\)-reduction engine. Reduction proceeds by repeated single-step reduction via a function \(step? : (A : E) \rightarrow \option\ (\Sigma' (B : E), A \barr B)\) and well-founded recursion by decreasing syntactic size~\ref{thm:sn}. The reducer has has soundness and completeness with respect to \(\barr^{!}\). The reducer is used to decide \(\beta\)-equality and is central to decidable type-checking.
+Our \(\beta\)-reduction rules are implemented as a total, terminating \(\beta\)-reduction engine. Reduction proceeds by repeated single-step reduction via a function \(\step : (A : E) \rightarrow \option\ (\Sigma' (B : E), A \barr B)\) and well-founded recursion by decreasing syntactic size~\ref{thm:sn}. The reducer has has soundness and completeness with respect to \(\barr^{!}\). The reducer is used to decide \(\beta\)-equality and is central to decidable type-checking.
 
-In applications \((f x) \in E\), \(step?\) attempts a head single-step, if it is available:
-
-\begin{leancode}
-@[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
-def step_head? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (Red e e'))) :=
-  match e with
-  | (DCC? ((Σ' _B _C) (& _x))) => .some ⟨_, ⟨.sigma⟩⟩
-  | (DCC? ((𝟚.Rec _motive _x _y) _env 𝟙₂)) =>
-    .some ⟨_, ⟨.ind_bool_true⟩⟩
-  | (DCC? ((𝟚.Rec _motive _x _y) _env 𝟘₂)) =>
-    .some ⟨_, ⟨.ind_bool_false⟩⟩
-  | DCC? ((!<> _f) (& _x))                                 => .some ⟨_, ⟨.map⟩⟩
-  | DCC? (($<> _f) (& _x))                                 => .some ⟨_, ⟨.fmap⟩⟩
-  | DCC? ((* _α) (& _x))                                 => .some ⟨_, ⟨.unbox⟩⟩
-  | DCC? ((⟨,⟩_β _M _N) (& _x))                        => .some ⟨_, ⟨.pair⟩⟩
-  | (DCC? ((Eval _α _β _x) (,__β _y _z)))            => .some ⟨_, ⟨.evalc⟩⟩
-  | (DCC? ((Eql _f_α) (& _env) (& _y)))              => .some ⟨_, ⟨.eql⟩⟩
-  | (DCC? ((=' _f_α) _x _y _z))              => .some ⟨_, ⟨.eq_mk⟩⟩
-  | (DCC? ((`_β _x) _y))                             => .some ⟨_, ⟨.quot⟩⟩
-  | (DCC? ((Id _α) _x))                                => .some ⟨_, ⟨.id⟩⟩
-  | (DCC? ((Fst _α) (,_γ _a _b)))                     => .some ⟨_, ⟨.fstc⟩⟩
-  | (DCC? ((Swap _B _C) (,_B₂ _a _b)))                 => .some ⟨_, ⟨.swap⟩⟩
-  | (DCC? ((Snd _α) (,_γ _a _b)))                     => .some ⟨_, ⟨.sndc⟩⟩
-  | (DCC? ((∘ _x _y) _z))                              => .some ⟨_, ⟨.comp⟩⟩
-  | (DCC? ((!Λ _α _β _x) (& _y) (& _z)))                => .some ⟨_, ⟨.curr'⟩⟩
-  | (DCC? ((Λ _α _β _x) _y _z)) => .some ⟨_, ⟨.curr⟩⟩
-  | _ => .none
-\end{leancode}
-\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Run.lean\#L10}{Expr.step\_head?}\\
-
-If no head step is available, it attempts to step \(f\), then if \(f\) cannot be stepped, it attempts to step \(x\). If \(e\) is a combinator of the form \((c\ x_0 \ldots x_n)\) such that \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\), the first point \(x_i\) where \(i < n\) which can make a step is used:
-
-\begin{leancode}
-@[dcc_force_reduce, dcc_force_aff, aesop unsafe norm (rule_sets := [DccForceReduce])]
-def step? (e : Expr) : Option ((e' : Expr) × (PULift.{1, 0} (Red e e'))) :=
-  open Dsl in match step_head? e with
-  | .some h => .some h
-  | .none =>
-    match e.cases_point_arity' with
-    | .inl ⟨heq⟩ =>
-      match e with
-      | DCC? (f x) =>
-        match f.step?, x.step? with
-        | .some ⟨f', ⟨h₁⟩⟩, _ => .some ⟨(DCC? (f' x)), ⟨.congrFun h₁⟩⟩
-        | _, .some ⟨x', ⟨h₁⟩⟩ => .some ⟨(DCC? (f x')), ⟨.congrArg h₁⟩⟩
-        | _, _ => .none
-      | _ => .none
-    | .inr (.inl ⟨heq⟩) =>
-      match (e.points.get ⟨0, by simp [heq]⟩).step? with
-      | .some ⟨_, ⟨h₁⟩⟩ =>
-        .some ⟨_, ⟨.point 0 (by simp [heq]) h₁⟩⟩
-      | .none => .none
-    | .inr (.inr (.inl ⟨heq⟩)) =>
-      match (e.points.get ⟨0, by simp [heq]⟩).step?, (e.points.get ⟨1, by simp [heq]⟩).step? with
-      | .some ⟨_, ⟨h₁⟩⟩, _ =>
-        .some ⟨_, ⟨.point 0 (by simp [heq]) h₁⟩⟩
-      | _, .some ⟨_, ⟨h₂⟩⟩ =>
-        .some ⟨_, ⟨.point 1 (by simp [heq]) h₂⟩⟩
-      | _, _ => .none
-    | .inr (.inr (.inr (.inl ⟨heq⟩))) =>
-      match (e.points.get ⟨0, by simp [heq]⟩).step?, (e.points.get ⟨1, by simp [heq]⟩).step? with
-      | .some ⟨_, ⟨h₁⟩⟩, _ =>
-        .some ⟨_, ⟨.point 0 (by simp [heq]) h₁⟩⟩
-      | _, .some ⟨_, ⟨h₂⟩⟩ =>
-        .some ⟨_, ⟨.point 1 (by simp [heq]) h₂⟩⟩
-      | _, _ =>
-        match (e.points.get ⟨2, by simp [heq]⟩).step? with
-        | .some ⟨_, ⟨h₃⟩⟩ =>
-          .some ⟨_, ⟨.point 2 (by simp [heq]) h₃⟩⟩
-        | .none => .none
-    | .inr (.inr (.inr (.inr ⟨heq⟩))) =>
-      match (e.points.get ⟨0, by simp [heq]⟩).step?, (e.points.get ⟨1, by simp [heq]⟩).step? with
-      | .some ⟨_, ⟨h₁⟩⟩, _ =>
-        .some ⟨_, ⟨.point 0 (by simp [heq]) h₁⟩⟩
-      | _, .some ⟨_, ⟨h₂⟩⟩ =>
-        .some ⟨_, ⟨.point 1 (by simp [heq]) h₂⟩⟩
-      | _, _ =>
-        match (e.points.get ⟨2, by simp [heq]⟩).step?, (e.points.get ⟨3, by simp [heq]⟩).step? with
-        | .some ⟨_, ⟨h₃⟩⟩, _ =>
-          .some ⟨_, ⟨.point 2 (by simp [heq]) h₃⟩⟩
-        | _, .some ⟨_, ⟨h₄⟩⟩ =>
-          .some ⟨_, ⟨.point 3 (by simp [heq]) h₄⟩⟩
-        | _, _ => .none
-termination_by (e.size, sizeOf e)
-decreasing_by
-  any_goals (grind)
-\end{leancode}
-\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Run.lean\#L59}{Expr.step?}\\
-
-Reduction to a normal form proceeds by repeated single-step reduction and well-founded recursion given strong-normalization~\ref{thm:sn} until no step is available:
-
-\begin{leancode}
-@[dcc_force_reduce, aesop norm (rule_sets := [DccForceReduce])]
-def reduce.{u} {α : Type u} {t : α → ℕ} (r : α → α → Prop) [hR : RedRel r t]
-  (e : α) : ((e' : α) × (PULift.{u + 1, 0} (Relation.ReflTransGen r e e'))) :=
-  match hR.run e with
-  | .some ⟨e', ⟨h⟩⟩ =>
-    have _size_ : t e' < t e := hR.decreasing h
-    let ⟨e'', ⟨h₂⟩⟩ := reduce r (t := t) e'
-    ⟨e'', ⟨.trans (.single h) h₂⟩⟩
-  | .none => ⟨e, ⟨.refl⟩⟩
-termination_by t e
-\end{leancode}
-\noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L113}{Expr.reduce}
+In applications \((f x) \in E\), \(\step\) attempts a head single-step, if it is available \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Run.lean\#L10}{Expr.step\_head?}. If no head step is available, it attempts to step \(f\), then if \(f\) cannot be stepped, it attempts to step \(x\). If \(e\) is a combinator of the form \((c\ x_0 \ldots x_n)\) such that \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\), the first point \(x_i\) where \(i < n\) which can make a step is used \leanlink{https://github.com/lexzaiello/DCC/blob/master/Dcc/Red/Run.lean\#L59}{Expr.step?}. Finally, reduction to a normal form proceeds by repeated single-step reduction and well-founded recursion given strong-normalization~\ref{thm:sn} until no step is available \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L113}{Expr.reduce}.
 
 \begin{thm}\label{thm:semicomplete}
-  Semi-completeness of single-step reduction: If \(A, B \in E\) and \(A \barr B\), then there exists \(B' \in E\) and \(h' \vdash A \barr B'\) such that \(step? A = \some\ \langle B, h' \rangle\).
+  Semi-completeness of single-step reduction: If \(A, B \in E\) and \(A \barr B\), then there exists \(B' \in E\) and \(h' \vdash A \barr B'\) such that \(\step\ A = \some\ \langle B, h' \rangle\).
 \end{thm}
 
 \begin{proof}
-  Suppose \(A \barr B\). The proof proceeds by induction on \(A\) and analysis of the definition of \(step?\).
+  Suppose \(A \barr B\). The proof proceeds by induction on \(A\) and analysis of the definition of \(\step\).
   \begin{description}
-    \item[\(A\) can make a head step] If \(A\) can make a head step, then there exists some \(B' \in E\) such that \(step?\ A = \some\ \langle B', h \rangle\) where \(h\) is proven by the corresponding single-step rule~\ref{sec:convrules}.
-    \item[\(A\) is of the form \((f x)\) but \(A\) cannot make a head step] If \(A\) cannot make a head step, then \(A \barr B\) must be given by either function congruence or argument congruence. Suppose there exists \(f' \in E\) such that \(f \barr f'\). Then, by the inductive hypothesis, there exists \(f'_2 \in E\) such that \(h \vdash f \barr f'_2\) and \(step?\ f = \some\ \langle f'_2, h \rangle\). So, \(step?\ (f x) = \some\ \langle (f'_2 x), \congrfun\ h \rangle\). Suppose \(f\) is in normal form. Then, there exists \(x' \in E\) such that \(x \barr x'\). So, by the inductive hypothesis, there exists \(x'_2 \in E\) such that \(h \vdash x \barr x'_2\). And, since \(f\) is in normal form, then \(step?\ f = \none\), since a contradiction is derived if \(step?\ f = \some\ \langle f', h \rangle\). So, \(step?\ (f x) = \some\ \langle (f x'_2), \congrarg\ h \rangle\).
+    \item[\(A\) can make a head step] If \(A\) can make a head step, then there exists some \(B' \in E\) such that \(\step\ A = \some\ \langle B', h \rangle\) where \(h\) is proven by the corresponding single-step rule~\ref{sec:convrules}.
+    \item[\(A\) is of the form \((f x)\) but \(A\) cannot make a head step] If \(A\) cannot make a head step, then \(A \barr B\) must be given by either function congruence or argument congruence. Suppose there exists \(f' \in E\) such that \(f \barr f'\). Then, by the inductive hypothesis, there exists \(f'_2 \in E\) such that \(h \vdash f \barr f'_2\) and \(\step\ f = \some\ \langle f'_2, h \rangle\). So, \(\step\ (f x) = \some\ \langle (f'_2 x), \congrfun\ h \rangle\). Suppose \(f\) is in normal form. Then, there exists \(x' \in E\) such that \(x \barr x'\). So, by the inductive hypothesis, there exists \(x'_2 \in E\) such that \(h \vdash x \barr x'_2\). And, since \(f\) is in normal form, then \(\step\ f = \none\), since a contradiction is derived if \(\step\ f = \some\ \langle f', h \rangle\). So, \(\step\ (f x) = \some\ \langle (f x'_2), \congrarg\ h \rangle\).
     \item[\(A\) is of the form \((c\ x_0 \ldots x_n)\) where \(c \in C\) and \(\{x_0 \ldots x_n\} \subset E\)]
       
-      Note that \(step?\ A = \none\) if \(step?\ x_i = \none\) for all \(i < n\). But, since \(A\) is a combinator, \(A \barr B\) must be given by the point rule. So, there exists some \(j < n\) such that \(x_j \barr x'_j\). And, by the inductive hypothesis, there exists \(x''_j\) and \(h \vdash x_j \barr x''_j\) such that \(step?\ x_j = \some\ \langle x''_j, h \rangle\). Hence, there must exist \(B' \in E\) and \(h \vdash A \barr B'\) such that \(step?\ (c\ x_0 \ldots x_n) = \some\ \langle B', h \rangle\).
+      Note that \(\step\ A = \none\) if \(\step\ x_i = \none\) for all \(i < n\). But, since \(A\) is a combinator, \(A \barr B\) must be given by the point rule. So, there exists some \(j < n\) such that \(x_j \barr x'_j\). And, by the inductive hypothesis, there exists \(x''_j\) and \(h \vdash x_j \barr x''_j\) such that \(\step\ x_j = \some\ \langle x''_j, h \rangle\). Hence, there must exist \(B' \in E\) and \(h \vdash A \barr B'\) such that \(\step\ (c\ x_0 \ldots x_n) = \some\ \langle B', h \rangle\).
     \end{description}
     \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/Complete.lean\#L7}{Expr.semi\_complete}
 \end{proof}
@@ -830,7 +728,7 @@ termination_by t e
 \end{thm}
 
 \begin{proof}
-  The proof proceeds by well-founded recursion with respect to syntactic size and analysis of the definition of \(reduce\). If \(step? A = \none\), then \(A\) is a normal form, since otherwise, \(step? A \neq none\) by~\ref{thm:semicomplete}. If \(step? A = \some \langle B_0, h_0 \rangle\) such that \(h_0 \vdash A \barr B_0\), then \(size(B_0) < size(A)\) by~\ref{thm:sn}. So, by well-founded recursion, \(B_0\) is a normal form.\\
+  The proof proceeds by well-founded recursion with respect to syntactic size and analysis of the definition of \(reduce\). If \(\step\ A = \none\), then \(A\) is a normal form, since otherwise, \(\step\ A \neq none\) by~\ref{thm:semicomplete}. If \(\step\ A = \some \langle B_0, h_0 \rangle\) such that \(h_0 \vdash A \barr B_0\), then \(size(B_0) < size(A)\) by~\ref{thm:sn}. So, by well-founded recursion, \(B_0\) is a normal form.\\
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L374}{Expr.reduce\_norm}
 \end{proof}
 
@@ -841,7 +739,7 @@ termination_by t e
 \begin{proof}
   This fact is shown by induction on \(A\) with respect to size and analysis of the definition of \(reduce\):
   \begin{description}
-    \item[\(step? A = \none\)] If \(step?\ A = \none\), then \(A\) can be shown to be in normal-form: suppose for the sake of contradiction that \(A \barr B\). Then, by semi-completeness \ref{thm:semicomplete}, there exist \(B' \in E\) and \(h \vdash A \barr B'\) such that \(step?\ A = \some\ \langle B', h \rangle\). Hence, a contradiction is derived, so \(A\) is in normal form. So, \(h\) must be proven by reflexivity. That is, \(A = B\). Therefore, \(reduce (\barr) A = \langle B, refl \rangle\).
+    \item[\(\step\ A = \none\)] If \(\step\ A = \none\), then \(A\) can be shown to be in normal-form: suppose for the sake of contradiction that \(A \barr B\). Then, by semi-completeness \ref{thm:semicomplete}, there exist \(B' \in E\) and \(h \vdash A \barr B'\) such that \(\step\ A = \some\ \langle B', h \rangle\). Hence, a contradiction is derived, so \(A\) is in normal form. So, \(h\) must be proven by reflexivity. That is, \(A = B\). Therefore, \(reduce (\barr) A = \langle B, refl \rangle\).
     \item[\(step? A = \langle B', h' \rangle\), where \(h' \vdash A \barr B'\)] If a step can be made, then by confluence \ref{thm:confglobal}, there exists \(D \in E\) such that \(h_1 \vdash B' \barr^{*} D\) and \(h_2 \vdash B \barr^{*} D\). But since \(B\) is a normal form, \(B = D\), so \(B' \barr^{*} B\). By strong-normalization~\ref{thm:sn}, \(size(B') < size(A)\), so by well-founded induction, \(reduce (\barr) B' = \langle B, h_2 \rangle\). And so, \(reduce (\barr) A = \langle B, trans\ (single\ h') h_2 \rangle\).
     \end{description}
     \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Red/RelationProp.lean\#L393}{Expr.reduce\_complete}
@@ -880,7 +778,7 @@ Using our reduction function with soundness and completeness, we can decide \(\b
 
 DCC has decidable type-checking, dependent types, and uses affine logic. Every primitive object is well-typed, function types are quite legible, and explicit universe levels do not need to be specified (except in literal \(\sort{u}\) terms). DCC achieves decidable type-checking by eagerly \(\beta\)-reducing all inferred types to canonical, normal form, and by defining definitional equality as \(\beta\)-equality. DCC achieves legible types and universe inference by encoding dependent type arguments as points of the respective combinator which index an applied environment argument, rather than by supplying type arguments as arguments themselves (resembling Martin L\"of's notion of a Tarski universe \autocite[p. 88]{martin1984intuitionistic}).
 
-We proceed by enumerating the inference rules for the core type formers, the rules for constant terms, and then the inference rules for all primitive combinators in the order they were defined in \ref{sec:convrules}.
+We proceed by enumerating the inference rules for the core type formers, the rules for constant terms, and then the inference rules for all primitive combinators in the order they were defined in~\ref{sec:convrules}.
 
 \begin{defi}\label{def:defeq}
   \(A \equiv B\) iff \(A =_\beta B\) where \(A, B \in E\)~\ref{def:betaeq}.
@@ -897,38 +795,23 @@ We proceed by enumerating the inference rules for the core type formers, the rul
 \end{defi}
 
 \begin{defi}\label{def:inferpi}
-  We have the following mutually exclusive inference rules for \(\Pi\):
+  The inference rule for \(\Pi\) is as such:
   \[
     \begin{gathered}
     \inferrule[Pi]
-    { B : A \rightarrow \sort{u} \quad B \barr^{!} B' \quad C : (\comb[\Pi][B_c][C_c] x_C) \quad (B_c x_C) \barr^{!} A \\
-      (C_C x_C) \barr^{!} \comb[\Pi][B'][\comb[\Lambda][A][B'][\comb[`\comb[\Sigma'][A][B']][\sort{v}]]]}
-    { \comb[\Pi][B][C] : A \rightarrow \sort{\max(u, v)}}\\
-    \inferrule[Pi]
-    { B : \comb[!][A] \rightarrow \sort{u} \quad B \barr^{!} B' \quad C : (\comb[\Pi][B_c][C_c] x_C) \quad (B_c x_C) \barr^{!} \comb[!][A] \\
-      (C_C x_C) \barr^{!} \comb[\Pi][\comb[!<>][B']][\comb[!\Lambda][A][B'][\comb[`\comb[!][\comb[\Sigma'][A][B']]][\sort{v}]]]}
-    { \comb[\Pi][B][C] : A \rightarrow \sort{\max(u, v)}}\\
-    \inferrule[Pi]
-    { B : A \rightarrow \sort{u} \quad C : A \rightarrow A_2 \rightarrow \sort{v}}
-    { \comb[\Pi][B][C] : A \rightarrow \sort{\max(u, v)}}\\
-    \inferrule[Pi]
-    { B : A \rightarrow \sort{u} \quad B \barr^{!} B' \quad C : (\comb[\Pi][B_C][C_C] x_C) \quad (B_c x_C) \barr^{!} A \\
-      (C_C x_C) \barr^{!} \comb[\Pi][B'][\comb[`A_2][\comb[`A_3][\sort{v}]]]}
+    { B : A \rightarrow \sort{u} \quad B \barr^{!} B' \quad C : (x : A) \rightarrow (y : B' x) \rightarrow \sort{v}}
     { \comb[\Pi][B][C] : A \rightarrow \sort{\max(u, v)}}
     \end{gathered}
   \]
-  We distinguish between four different kinds of indices \(C : (x : A) \rightarrow (y : B x) \rightarrow \sort{v}\), which are all arrows into \(\sort{v}\) whose arguments may or may not depend on the context.
 \end{defi}
 
 \begin{defi}
   \(\Sigma\)-types are inferred as such:
   \[
     \inferrule[Sigma]
-    { A : \sort{u} \quad B : (\comb[\Pi][B][C] env) \quad A \equiv (B env) \\
-      (C\ env\ \hole{h_{\max}((\comb[\Pi][B][C]\ env)) + 1}) \barr^{!} \sort{v}}
+    { A : \sort{u} \quad B : A \rightarrow \sort{v}}
     { \comb[\Sigma][A][B] : \sort{\max(u, v)}}
   \]
-  where \(h_{\max} : E \rightarrow \mathbb{N}\) calculates the maximum ``hole'' in a tree and is used to test if \(B\) is an arrow (but only in this rule).
 \end{defi}
 
 \begin{defi}\label{def:inferapp}
@@ -978,8 +861,8 @@ We proceed by enumerating the inference rules for the core type formers, the rul
       { x : A \qquad B : \sort{v} \qquad B \barr^{!} B'}
       { \comb[`B][x] : B' \rightarrow A'}\\
       \inferrule[Comp]
-      { g : A \rightarrow B \qquad f : (\comb[\Pi][\comb[`\mathbb{1}][B]][\comb[`\mathbb{1}][C]] \ast) \qquad g \barr^{!} g'}
-      { \comb[\circ][f][g] : (\comb[\Pi][\comb[`\mathbb{1}][A]][\comb[`\mathbb{1}][\comb[\circ][C][g]]] \ast)}
+      { g : A \rightarrow B \qquad f : (x : B) \rightarrow C x \qquad g \barr^{!} g'}
+      { \comb[\circ][f][g] : (x : A) \rightarrow (\comb[\circ][C][g'] x)}
     \end{gathered}
   \]
 \end{defi}
@@ -989,20 +872,6 @@ We proceed by enumerating the inference rules for the core type formers, the rul
 
   This is since \(\mathbb{1} : \sort{0}\) implies \(\comb[Id][\mathbb{1}] : \mathbb{1} \rightarrow \mathbb{1}\), and \(\mathbb{1} \rightarrow \mathbb{1} = (\comb[\Pi][\comb[`\mathbb{1}][\mathbb{1}]][\comb[`\mathbb{1}][\comb[`\mathbb{1}][\mathbb{1}]]] \ast)\) and \(\ast : \mathbb{1}\) and \((\comb[`\mathbb{1}][\mathbb{1}] \ast) \equiv \mathbb{1}\), and \((\comb[`\mathbb{1}][\mathbb{1}] \ast) \barr^{!} \mathbb{1}\).\\
 \end{exa}
-
-In the familiar \((x : A) \rightarrow B x\) notation, the inference rule for composition is written as:
-\[
-  \inferrule[Comp]
-  { g : A \rightarrow B \qquad f : (x : B) \rightarrow C x \qquad g \barr^{!} g'}
-  { \comb[\circ][f][g] : (x : A) \rightarrow C (g' x)}
-\]
-Similarly, the inference rule for \(\Pi\) may be written notationally as:
-\[
-  \inferrule[Pi]
-  { B : A \rightarrow \sort{u} \qquad C : (x : A) \rightarrow (y : B x) \rightarrow \sort{v}}
-  { \comb[\Pi][B][C] : A \rightarrow \sort{\max(u, v)}}
-\]
-From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote dependent products for clarity. Consult the Appendix~\ref{appendix:sup} for the expanded inference rules.
 
 \begin{defi}
   Projections and currying are as such:
@@ -1139,16 +1008,16 @@ From henceforth, we will use the notation \((x : A) \rightarrow B x\) to denote 
 
 \subsection{Type-Checking is Decidable}\label{decidable}
 
-Our inference rules do not assume the existence of a catch-all conversion rule. Instead, inferred types are reduced to normal form in each rule individually, and definitional equality of terms is checked by comparing their normal-form reducts given by \(reduce\). This enables decidable type-checking. We have implemented a type-checker on a deep embedding of DCC in Lean 4, and have shown that it to be judgmentally complete, making type-checking decidable.
+Our inference rules do not assume the existence of a general conversion rule of the form ``if \(x : A\) and \(A \equiv B\), then \(x : B\)''. Instead, inferred types are reduced to normal form in each rule individually, and definitional equality of terms is checked by comparing their normal-form reducts given by \(reduce\). This enables decidable type-checking. We have implemented a type-checker on a deep embedding of DCC in Lean 4, and have shown that it to be judgmentally complete, making type-checking decidable.
 
-The source code of the type-checker is available in the Appendix~\ref{appendix:sup}. Of note, judgments carry computational content and live in \(\textbf{Type}\), rather than \(\textbf{Prop}\): \(\text{Judge} : E \rightarrow E \rightarrow Type\). The \href{https://github.com/lexzaiello/DCC/blob/Dcc/Judge.lean#L599}{type-checker} is total and equipped with soundness: \(infer : (e : E) \rightarrow \text{Except}\ (\text{TypeError}\ e) (\Sigma' (\tau : E), \text{Judge}\ e\ \tau)\). Judgmental completeness is provable from the fact that all the inference rules are mutually exclusive, and there is exactly one canonical type for a given term since catch-all conversion is not permitted.
+The source code of the type-checker is available in the Appendix~\ref{appendix:sup}. Of note, judgments carry computational content and live in \(\textbf{Type}\), rather than \(\textbf{Prop}\): \(\text{Judge} : E \rightarrow E \rightarrow Type\). The \href{https://github.com/lexzaiello/DCC/blob/Dcc/Judge.lean#L599}{type-checker} is total and equipped with soundness: \(\tinfer : (e : E) \rightarrow \text{Except}\ (\text{TypeError}\ e) (\Sigma' (\tau : E), \text{Judge}\ e\ \tau)\). Judgmental completeness is provable from the fact that all the inference rules are mutually exclusive, and there is exactly one canonical type for a given term since catch-all conversion is not permitted.
 
 \begin{thm}\label{thm:judgecomplete}
-  Judgmental completeness: If \(e, \tau \in E\) and \(h \vdash e : \tau\), then \(\text{infer}\ e = ok \langle \tau, h \rangle\).
+  Judgmental completeness: If \(e, \tau \in E\) and \(h \vdash e : \tau\), then \(\tinfer\ e = ok \langle \tau, h \rangle\).
 \end{thm}
 
 \begin{proof}
-  By induction on the typing derivation \(h\). Cases are mutually exclusive and we have soundness, so the proof is reduced to checking that each branch implies that its corresponding branch in \(infer\) is \(ok\). In each case, if a definitional equality is supposed by \(h\), such that \(A \equiv B\) for some \(A, B \in E\) implies \(e : \tau\), then there exists \(C \in E\) such that \(h_{eq,1} \vdash A \barr^{!} C\) and \(h_{eq,2} \vdash B \barr^{!} C\). So, by completeness of \(\beta\)-reduction with respect to normal forms \ref{thm:reducecomplete}, \(reduce (\barr) A = \langle C, h_{eq,1} \rangle = \langle C, h_{eq,2} \rangle = reduce (\barr) B\). Hence, the corresponding equality check in \(infer\ e\) passes, and so in each case, \(infer\ e = ok\ \langle \tau, h \rangle\).
+  By induction on the typing derivation \(h\). Cases are mutually exclusive and we have soundness, so the proof is reduced to checking that each branch implies that its corresponding branch in \(\tinfer\) is \(ok\). In each case, if a definitional equality is supposed by \(h\), such that \(A \equiv B\) for some \(A, B \in E\) implies \(e : \tau\), then there exists \(C \in E\) such that \(h_{eq,1} \vdash A \barr^{!} C\) and \(h_{eq,2} \vdash B \barr^{!} C\). So, by completeness of \(\beta\)-reduction with respect to normal forms \ref{thm:reducecomplete}, \(reduce (\barr) A = \langle C, h_{eq,1} \rangle = \langle C, h_{eq,2} \rangle = reduce (\barr) B\). Hence, the corresponding equality check in \(\tinfer\ e\) passes, and so in each case, \(\tinfer\ e = ok\ \langle \tau, h \rangle\).
 
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability.lean\#L135}{Expr.Judge.complete}
 \end{proof}
@@ -1158,7 +1027,7 @@ The source code of the type-checker is available in the Appendix~\ref{appendix:s
 \end{thm}
 
 \begin{proof}
-  If \(h_1 \vdash e : \tau_1\) and \(h_2 \vdash e : \tau_2\), then by judgmental completeness \ref{thm:judgecomplete}, \(infer\ e = ok\ \langle \tau_1, h_1 \rangle = infer\ e = ok\ \langle \tau_2, h_2 \rangle\), so \(\tau_1 = \tau_2\).
+  If \(h_1 \vdash e : \tau_1\) and \(h_2 \vdash e : \tau_2\), then by judgmental completeness \ref{thm:judgecomplete}, \(\tinfer\ e = ok\ \langle \tau_1, h_1 \rangle = \tinfer\ e = ok\ \langle \tau_2, h_2 \rangle\), so \(\tau_1 = \tau_2\).
 
   \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/fb7acf6d9644df7d13c809d12609b59eaca5c763/Dcc/Metatheory/Decidability.lean\#L138}{Expr.Judge.unique}
 \end{proof}
@@ -1340,7 +1209,7 @@ Using these facts about inversion, we prove progress.
 \noindent \leanlink{https://github.com/lexzaiello/DCC/blob/4b0ea7f932ae69ac6d11658d69d3dcc0c261f4e7/Dcc/Metatheory/Consistent.lean\#L7}{Expr.Judge.elim\_bot}
 \end{proof}
 
-We note that the subject-reduction, progress, and consistency are proven as computable definitions, rather than theorems in \(\textbf{Prop}\). Furthermore, the progress theorem gives a computable choice of \(e' \in E\) such that \(e \barr e'\) in case \(e\) is not a value, rather than merely proving its existence existentially.
+We note that subject-reduction, progress, and consistency are proven as computable definitions, rather than theorems in \(\textbf{Prop}\). Furthermore, the progress theorem gives a computable choice of \(e' \in E\) such that \(e \barr e'\) in case \(e\) is not a value, rather than merely proving its existence existentially.
 
 \section{Computable Equality Reflection}\label{extensional}
 
@@ -1370,7 +1239,7 @@ We note that equality reflection is a computable definition in DCC, rather than 
 
 \section{Compiling Lean 4 to DCC}\label{compilelean}
 
-The subset of Lean 4 that maps to the base Calculus of Constructions without equality can be compiled to DCC. We note that working examples are somewhat limited, since we refrained from equipping DCC with \(\eta\)-reduction, as it is outside of the scope of this paper and not necessary to demonstrate the fundamental theorems. However, in DCC with \(\eta\)-reduction, the dependent \(K\) combinator written as a Lean term can be compiled to DCC. We do not propose a method for encoding inductive types in DCC, as it is out of scope.
+The subset of Lean 4 that maps to the base Calculus of Constructions without equality can be compiled to DCC. We note that working examples are somewhat limited, since we refrained from equipping DCC with \(\eta\)-reduction, as it is outside of the scope of this paper and not necessary to demonstrate the fundamental theorems. We do not propose a method for encoding inductive types in DCC, as it is out of scope.
 
 Compilation is quite straightforward. Contexts introduced by binders during compilation are represented as \(\Sigma\) or bang \(!\) terms and the program is always initialized at the top-level with the empty context \(\comb[!][\mathbb{1}]\). Debruijn-indexed variables are compiled to composed projections, \(\lambda\)-binders are compiled to \(!\Lambda\)-terms, and \(\forall\)-terms are compiled to \(\Pi\)-terms. The only complication is DCC's affine restriction: Lean terms are preprocessed to annotate code denoting how many times a resource should be banged, and values are boxed appropriately.
 
@@ -1392,8 +1261,8 @@ We are most concerned with compiling the subset of Lean with \(\forall\), \(\lam
     \begin{aligned}
       L_c &\subset L & \{ n \in \mathbb{N} \mid \text{\(n\) is a variable}\} &\subset L\\
       \{ (M N) \mid M, N \in L \} &\subset L & \{ \lambda x : A.M \mid A, M \in L \} &\subset L\\
-      \{ \forall x : A.B \mid A, B \in L\} &\subset L & \left\{ \sum_{x : A} B(x) \mid A, B \in L \right\} &\subset L\\
-      \{ \shared\ A \mid A \in L \} &\subset L & \{ \share\ A x \mid A, x \in L \} &\subset L
+      \{ \forall x : A,B \mid A, B \in L\} &\subset L & \left\{ \sum_{x : A} B(x) \mid A, B \in L \right\} &\subset L\\
+      \{ \shared\ A \mid A \in L \} &\subset L & \{ \share\ A\ x \mid A, x \in L \} &\subset L
     \end{aligned}
   \]
   \[
@@ -1512,7 +1381,7 @@ Applications and \(\Sigma\)-terms under binders duplicate the context across the
       { \llb \shared\ A \rrb_{\comb[!][\Gamma]} \coloneq \comb[!<>][x']} \qquad
       \inferrule
       { \llb x \rrb_{\Gamma} \coloneq x'}
-      { \llb \share\ A x \rrb_{\comb[!][\Gamma]} \coloneq \comb[\$<>][x']}
+      { \llb \share\ A\ x \rrb_{\comb[!][\Gamma]} \coloneq \comb[\$<>][x']}
     \end{gathered}
   \]
 \end{defi}
@@ -1557,7 +1426,7 @@ Compilation at the top-level differs from abstraction in that the context is emp
       { \llb \shared\ A \rrb \coloneq \comb[!][\llb A \rrb]} \qquad
       \inferrule
       { }
-      { \llb \share\ A x \rrb \coloneq \comb[\&][\llb x \rrb]}
+      { \llb \share\ A\ x \rrb \coloneq \comb[\&][\llb x \rrb]}
     \end{gathered}
   \]
 \end{defi}
@@ -1595,7 +1464,7 @@ Compilation at the top-level differs from abstraction in that the context is emp
 
 \section{Examples}
 
-Several examples of type-checking are available in the \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Examples3.lean}{DCC repository}. We have omitted the details here, since the expressions and their inferred types are quite long and not suitable for this medium. We note that DCC is capable of compiling and type-checking the dependent identity function \(id : (A : \sort{u}) \rightarrow (x : A) \rightarrow x\):
+Several examples of type-checking are available in the \href{https://github.com/lexzaiello/DCC/blob/master/Dcc/Examples3.lean}{DCC repository}. We have omitted the details here, since the expressions and their inferred types are quite long and not suitable for this medium. We note that DCC is capable of compiling and type-checking the dependent identity function \(id : (A : \sort{u}) \rightarrow A \rightarrow A\):
 
 \begin{leancode}
 #eval Std.format (dcc_compile (fun (α : Type) (x : α) => x))
